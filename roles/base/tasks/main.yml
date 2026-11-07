@@ -1,0 +1,32 @@
+---
+
+- name: Update apt-hash and packages
+  ansible.builtin.apt:
+    update_cache: yes
+    upgrade: dist
+
+- name: Create user deploy
+  ansible.builtin.user:
+    name: deploy
+    state: present
+    shell: /bin/bash
+    groups: sudo
+    append: yes
+
+- name: Add publick SSH-key
+  ansible.posix.authorized_key:
+    user: deploy
+    state: present
+    key: "{{ vault_deploy_public_key }}"
+
+- name: deploy can callback sudo without password
+  ansible.builtin.copy:
+    content: "deploy ALL=(ALL) NOPASSWD:ALL"
+    dest: /etc/sudoers.d/deploy
+    mode: '0440'
+    validate: /usr/sbin/visudo -cf %s
+
+- name: Download packages
+  ansible.builtin.apt:
+    name: [python3, curl, git]
+    state: present

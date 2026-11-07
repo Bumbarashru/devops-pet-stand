@@ -1,0 +1,6 @@
+---
+- name: Provision  secure stand
+  hosts: server
+  become: true 
+  roles:
+    - firewall

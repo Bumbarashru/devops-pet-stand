@@ -25,7 +25,6 @@ def check(url: str) -> tuple[bool, str]:
 
 
 def write_log(path: str, message: str) -> None:
-    """Пишет строку в лог. Если не может — сообщает в stderr."""
     timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     line = f"{timestamp} {message}\n"
     try:

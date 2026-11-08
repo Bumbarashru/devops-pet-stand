@@ -1,27 +1,51 @@
-import logging
-from logging.handlers import RotatingFileHandler
-from flask import Flask, jsonify
+import sys
+import urllib.request
+import urllib.error
+from datetime import datetime
 
-app = Flask(__name__)
+DEFAULT_URL = "http://192.168.1.116/health"
+DEFAULT_LOG = "healthcheck.log"
+TIMEOUT = 5  
 
-logger = logging.getLogger('healthcheck_app')
-logger.setLevel(logging.INFO)
 
-handler = RotatingFileHandler('/var/log/healthcheck.log', maxBytes=1*1024*1024, backupCount=5)
-formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s', datefmt='%Y-%m-%d %H:%M:%S')
-handler.setFormatter(formatter)
+def check(url: str) -> tuple[bool, str]:
+    try:
+        with urllib.request.urlopen(url, timeout=TIMEOUT) as response:
+            if response.status == 200:
+                return True, "OK"
+            return False, f"FAIL (HTTP {response.status})"
+    except urllib.error.HTTPError as e:
+        return False, f"FAIL (HTTP {e.code})"
+    except urllib.error.URLError as e:
+        return False, f"FAIL (URLError: {e.reason})"
+    except TimeoutError:
+        return False, f"FAIL (Timeout after {TIMEOUT}s)"
+    except OSError as e:
+        return False, f"FAIL (OSError: {e})"
 
-logger.addHandler(handler)
 
-@app.route('/health')
-def health():
-    logger.info("OK")
-    return jsonify({"status": "healthy"}), 200
+def write_log(path: str, message: str) -> None:
+    """Пишет строку в лог. Если не может — сообщает в stderr."""
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    line = f"{timestamp} {message}\n"
+    try:
+        with open(path, "a", encoding="utf-8") as f:
+            f.write(line)
+    except OSError as e:
+        print(f"Не удалось записать лог в {path}: {e}", file=sys.stderr)
 
-@app.errorhandler(404)
-def not_found(e):
-    logger.warning("FAIL (HTTP 404)")
-    return jsonify({"error": "Not Found"}), 404
 
-if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=80)
+def main() -> int:
+    url = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_URL
+    log_path = sys.argv[2] if len(sys.argv) > 2 else DEFAULT_LOG
+
+    ok, message = check(url)
+    write_log(log_path, message)
+
+    print(f"{url} -> {message}")
+
+    return 0 if ok else 1
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -5,3 +5,4 @@
   roles:
     - base
     - firewall
+    - docker_app

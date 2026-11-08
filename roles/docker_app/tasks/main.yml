@@ -50,6 +50,33 @@
     groups: docker
     append: yes
 
+- name: Create dir for app
+  ansible.builtin.file:
+    path: /opt/secure-stand
+    state: directory
+    mode: 0755
+
+- name: copy docker-compose.yml
+  ansible.builtin.copy:
+    src: docker-compose.yml
+    dest: /opt/secure-stand/docker-compose.yml
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: copy nginx.conf
+  ansible.builtin.copy:
+    src: nginx.conf
+    dest: /opt/secure-stand/nginx.conf
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+    mode: '0644'
+
+- name: start servecis via Docker Compose
+  community.docker.docker_compose_v2:
+    project_src: /opt/secure-stand
+    state: present
+    build: false
 
 
 
